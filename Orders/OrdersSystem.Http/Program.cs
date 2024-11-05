@@ -5,22 +5,22 @@ using OrdersSystem.Infra.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
-using Confluent.Kafka;
 using OrdersSystem.Infra.Producers;
 using OrdersSystem.Infra.Processors;
+using OrdersSystem.Infra;
+using OrdersSystem.Infra.Consumers;
+using System.Text.Json;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-var kafkaConfig = builder.Configuration.GetSection("Kafka").Get<ProducerConfig>();
+builder.Services.AddKafkaConsumer(builder.Configuration);
+builder.Services.AddKafkaProducer(builder.Configuration);
 
-builder.Services.AddSingleton(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<KafkaProducer>>();
-    return new KafkaProducer(kafkaConfig, logger);
-});
+builder.Services.AddScoped<OrdersRepository>();
+
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -28,15 +28,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<OrdersRepository>();
+
 
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
+
+builder.Services.AddHostedService<PaymentProcessTopicConsumer>();
+
 builder.Services.AddHostedService<OutboxProcessor>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
@@ -46,7 +49,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapPost("/Order", async (OrdersRepository ordersRepository, KafkaProducer kafkaProducer, int amount) =>
 {
-    var orderId = Guid.NewGuid();
+    Guid orderId = Guid.NewGuid();
     Order order = new()
     {
         Id = orderId,
@@ -54,20 +57,19 @@ app.MapPost("/Order", async (OrdersRepository ordersRepository, KafkaProducer ka
         Status = OrderStatus.Pending,
     };
 
-    await ordersRepository.CreateOrder(order);
 
-    // Publish "Order Created" event to Kafka, including the order ID in the message
-    await kafkaProducer.ProduceAsync("orders-topic", $"Order created with ID {orderId}, Amount: {amount}");
+    string message = JsonSerializer.Serialize(await ordersRepository.CreateOrder(order));
+
+    await kafkaProducer.ProduceAsync("OrderCreated", message);
 
     return Results.Created($"/Order/{orderId}", order);
 })
 .WithName("Create Order")
 .WithOpenApi();
 
-// Endpoint for getting an order by ID
 app.MapGet("/Order/{id:guid}", async (OrdersRepository ordersRepository, Guid id) =>
 {
-    var order = await ordersRepository.GetOrder(id);
+    Order? order = await ordersRepository.GetOrder(id);
 
     if (order is null)
     {

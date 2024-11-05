@@ -18,9 +18,11 @@ services:
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_BROKER_ID=1
-      - KAFKA_LOG_RETENTION_MS= 60000  
+      - KAFKA_LOG_RETENTION_MS=60000
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_CREATE_TOPICS=PaymentProcessed:1:1,OrderCreated:1:1
+
     networks:
       - kafka
 

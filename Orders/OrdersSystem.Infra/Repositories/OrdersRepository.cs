@@ -1,7 +1,7 @@
-using System;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrdersSystem.Domain.Entities;
+using OrdersSystem.Domain.Enums;
 using OrdersSystem.Infra.DB;
 
 namespace OrdersSystem.Infra.Repositories;
@@ -17,14 +17,13 @@ public class OrdersRepository(AppDbContext appDbContext)
 
     public async Task<Order> CreateOrder(Order order)
     {
-        // Use a transaction to ensure atomicity
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
             await _context.Orders.AddAsync(order);
 
-            var outboxMessage = new OutboxMessage
+            OutboxMessage outboxMessage = new OutboxMessage
             {
                 Id = Guid.NewGuid(),
                 Topic = "OrderCreated",
@@ -46,5 +45,27 @@ public class OrdersRepository(AppDbContext appDbContext)
             throw;
         }
     }
+
+    public async Task<Order> UpdateOrder(Guid id, string status)
+    {
+        Order? order = await _context.Orders.FindAsync(id);
+
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Order with ID {id} not found.");
+        }
+
+        if (!Enum.TryParse(status, true, out OrderStatus newStatus))
+        {
+            throw new ArgumentException($"Invalid status value: {status}");
+        }
+
+        order.Status = newStatus;
+
+        await _context.SaveChangesAsync();
+
+        return order;
+    }
+
 
 }

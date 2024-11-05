@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using OrdersSystem.Infra.DB;
-using Microsoft.Extensions.Hosting;
-using OrdersSystem.Infra.Producers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using PaymentSystem.Domain.Entities;
+using PaymentSystem.Infra.DB;
+using PaymentSystem.Infra.Producers;
 
-namespace OrdersSystem.Infra.Processors;
+namespace PaymentSystem.Infra.Processors;
+
 public class OutboxProcessor : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -20,19 +22,19 @@ public class OutboxProcessor : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            
-            using (IServiceScope scope = _serviceProvider.CreateScope()) 
+
+            using (IServiceScope scope = _serviceProvider.CreateScope())
             {
                 AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                List<Domain.Entities.OutboxMessage> messages = await context.OutboxMessages
+                List<OutboxMessage> messages = await context.OutboxMessages
                     .Where(m => !m.IsProcessed)
                     .ToListAsync(stoppingToken);
 
-                foreach (Domain.Entities.OutboxMessage? message in messages)
+                foreach (OutboxMessage? message in messages)
                 {
                     await _kafkaProducer.ProduceAsync(message.Topic, message.Message);
-                    message.IsProcessed = true; 
+                    message.IsProcessed = true;
                 }
 
                 await context.SaveChangesAsync(stoppingToken);
@@ -42,3 +44,5 @@ public class OutboxProcessor : BackgroundService
         }
     }
 }
+
+

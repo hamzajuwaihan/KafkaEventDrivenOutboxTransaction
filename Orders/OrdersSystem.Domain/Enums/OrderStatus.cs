@@ -1,5 +1,3 @@
-using System;
-
 namespace OrdersSystem.Domain.Enums;
 
 public enum OrderStatus

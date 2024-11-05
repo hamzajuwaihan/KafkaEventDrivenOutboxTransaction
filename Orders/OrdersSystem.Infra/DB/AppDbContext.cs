@@ -13,7 +13,7 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<Order>()
             .Property(o => o.Status)
-            .HasConversion<string>(); // This line converts the enum to string in the database
+            .HasConversion<string>();
 
         base.OnModelCreating(modelBuilder);
     }

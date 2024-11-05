@@ -1,7 +1,8 @@
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 
-namespace OrdersSystem.Infra.Producers;
+namespace PaymentSystem.Infra.Producers;
+
 public class KafkaProducer
 {
     private readonly ProducerConfig _config;
