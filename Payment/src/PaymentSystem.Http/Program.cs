@@ -28,7 +28,6 @@ builder.Services.Configure<JsonOptions>(options =>
 builder.Services.AddHostedService<OrderCreatedConsumer>();
 builder.Services.AddHostedService<OutboxProcessor>();
 
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

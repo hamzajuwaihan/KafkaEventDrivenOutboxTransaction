@@ -1,4 +1,4 @@
-namespace PaymentSystem.Infra.Messages;
+namespace PaymentSystem.Domain.Messages;
 
 public class OrderCreatedMessage
 {
