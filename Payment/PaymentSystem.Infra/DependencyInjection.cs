@@ -37,12 +37,10 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
-
-        services.AddScoped<IPaymentRepository, PaymentRepository>();
-
-
         services.AddHostedService<OrderCreatedConsumer>();
         services.AddHostedService<OutboxProcessor>();
+
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
 
         return services;
 

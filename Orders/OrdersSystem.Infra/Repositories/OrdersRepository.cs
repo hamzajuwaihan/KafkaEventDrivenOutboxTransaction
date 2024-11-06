@@ -2,18 +2,20 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrdersSystem.Domain.Entities;
 using OrdersSystem.Domain.Enums;
+using OrdersSystem.Domain.Exceptions;
 using OrdersSystem.Infra.DB;
+using OrdersSystem.Infra.RepositoriesContracts;
 
 namespace OrdersSystem.Infra.Repositories;
 
-public class OrdersRepository(AppDbContext appDbContext)
+public class OrdersRepository(AppDbContext appDbContext) : IOrderRepository
 {
     private readonly AppDbContext _context = appDbContext;
 
-    public async Task<Order?> GetOrder(Guid orderId) =>
+    public async Task<Order> GetOrderById(Guid orderId) =>
     await _context.Orders
                        .Where(o => o.Id == orderId)
-                       .FirstOrDefaultAsync();
+                       .FirstOrDefaultAsync() ?? throw new OrderNotFoundException();
 
     public async Task<Order> CreateOrder(Order order)
     {

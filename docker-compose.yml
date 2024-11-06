@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -21,10 +23,26 @@ services:
       - KAFKA_LOG_RETENTION_MS=60000
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
-      - KAFKA_CREATE_TOPICS=PaymentProcessed:1:1,OrderCreated:1:1
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR= 1
     depends_on:
       - zookeeper
+    networks:
+      - kafka
+
+  topic-creator:
+    image: confluentinc/cp-kafka:latest
+    container_name: topic-creator
+    depends_on:
+      - kafka
+    entrypoint: >
+      /bin/sh -c "
+      # Wait for Kafka to start
+      while ! nc -z kafka 9092; do sleep 1; done;
+      # Create topics
+      kafka-topics --create --topic PaymentProcessed --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
+      kafka-topics --create --topic OrderCreated --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
+      # Keep the container running for potential future commands
+      tail -f /dev/null
+      "
     networks:
       - kafka
 
