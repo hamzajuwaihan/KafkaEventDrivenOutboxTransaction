@@ -2,11 +2,13 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PaymentSystem.Domain.Entities;
 using PaymentSystem.Domain.Enums;
+using PaymentSystem.Domain.Exceptions;
 using PaymentSystem.Infra.DB;
+using PaymentSystem.Infra.RepositoriesContracts;
 
 namespace PaymentSystem.Infra.Repositories;
 
-public class PaymentRepository
+public class PaymentRepository : IPaymentRepository
 {
     private readonly AppDbContext _context;
     private static readonly Random _random = new Random();
@@ -23,7 +25,6 @@ public class PaymentRepository
             Id = Guid.NewGuid(),
             OrderId = orderId,
             Amount = amount,
-            Status = PaymentStatus.Pending
         };
 
         using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
@@ -34,7 +35,7 @@ public class PaymentRepository
 
             await _context.Payments.AddAsync(payment);
 
-            OutboxMessage outboxMessage = new OutboxMessage
+            OutboxMessage outboxMessage = new()
             {
                 Id = Guid.NewGuid(),
                 Topic = "PaymentProcessed",
@@ -45,6 +46,7 @@ public class PaymentRepository
             await _context.OutboxMessages.AddAsync(outboxMessage);
 
             await _context.SaveChangesAsync();
+
             await transaction.CommitAsync();
 
             return payment;
@@ -55,9 +57,6 @@ public class PaymentRepository
             throw;
         }
     }
-    public async Task<Payment?> GetPayment(Guid paymentId)
-    {
-        return await _context.Payments
-            .FirstOrDefaultAsync(p => p.Id == paymentId);
-    }
+    public async Task<Payment> GetPaymentById(Guid paymentId) => await _context.Payments.FirstOrDefaultAsync(p => p.Id == paymentId) ?? throw new PaymentNotFoundException();
+
 }

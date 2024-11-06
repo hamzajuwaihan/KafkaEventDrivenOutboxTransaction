@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PaymentSystem.Infra\PaymentSystem.Infra.csproj" />
+    <ProjectReference Include="..\PaymentSystem.Presentation.Api\PaymentSystem.Presentation.Api.csproj" />
+    <ProjectReference Include="..\PaymentSystem.Application\PaymentSystem.Application.csproj" />
   </ItemGroup>
 
 </Project>

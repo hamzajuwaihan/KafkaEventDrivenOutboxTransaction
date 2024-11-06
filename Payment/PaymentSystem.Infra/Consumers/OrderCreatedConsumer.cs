@@ -14,7 +14,7 @@ namespace PaymentSystem.Infra.Consumers
         private readonly IConsumer<Ignore, string> _consumer;
         private readonly ILogger<OrderCreatedConsumer> _logger;
         private readonly IServiceProvider _serviceProvider;
-
+        private bool _isRunning;
         public OrderCreatedConsumer(IConfiguration configuration, ILogger<OrderCreatedConsumer> logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
@@ -42,7 +42,7 @@ namespace PaymentSystem.Infra.Consumers
                 ReconnectBackoffMaxMs = 10000,
                 SocketKeepaliveEnable = true
             };
-
+            _isRunning = true;
             _consumer = new ConsumerBuilder<Ignore, string>(consumerConfig).Build();
             _consumer.Subscribe("OrderCreated");
             _logger.LogInformation("Subscribed to topic: OrderCreated");
@@ -50,7 +50,7 @@ namespace PaymentSystem.Infra.Consumers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            while (_isRunning && !stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -81,6 +81,16 @@ namespace PaymentSystem.Infra.Consumers
                     _logger.LogError($"Consume error: {ex.Error.Reason}");
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
+                catch (KafkaException kEx)
+                {
+                    _logger.LogError($"Kafka error: {kEx.Error.Reason}");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    _logger.LogError($"Consumer has been disposed: {ex.Message}");
+                    break;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError($"Unexpected error: {ex.Message}");
@@ -94,8 +104,10 @@ namespace PaymentSystem.Infra.Consumers
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping Kafka consumer...");
-            _consumer.Close();
-            _consumer.Dispose();
+            _isRunning = false;
+            _consumer.Close(); 
+            await Task.Delay(1000); 
+            _consumer.Dispose(); 
             await base.StopAsync(cancellationToken);
         }
     }

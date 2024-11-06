@@ -1,14 +1,19 @@
 using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PaymentSystem.Infra.Consumers;
+using PaymentSystem.Infra.DB;
+using PaymentSystem.Infra.Processors;
 using PaymentSystem.Infra.Producers;
+using PaymentSystem.Infra.Repositories;
+using PaymentSystem.Infra.RepositoriesContracts;
 
 namespace PaymentSystem.Infra;
 
 public static class DependencyInjection
 {
-
-    public static IServiceCollection AddKafkaConsumer(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         ConsumerConfig consumerConfig = new ConsumerConfig
         {
@@ -18,11 +23,7 @@ public static class DependencyInjection
         };
 
         services.AddSingleton(consumerConfig);
-        return services;
-    }
 
-    public static IServiceCollection AddKafkaProducer(this IServiceCollection services, IConfiguration configuration)
-    {
         ProducerConfig producerConfig = new ProducerConfig
         {
             BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
@@ -34,7 +35,17 @@ public static class DependencyInjection
 
         services.AddSingleton<KafkaProducer>();
 
+        services.AddDbContext<AppDbContext>(options =>
+           options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+
+        services.AddHostedService<OrderCreatedConsumer>();
+        services.AddHostedService<OutboxProcessor>();
+
         return services;
+
     }
 
 }

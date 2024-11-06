@@ -10,7 +10,6 @@ public class Payment
     public Guid OrderId { get; set; }
     public decimal Amount { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public PaymentStatus Status { get; set; }
+    public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
     public Payment() { }
-
 }
