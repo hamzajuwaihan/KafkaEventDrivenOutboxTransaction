@@ -6,8 +6,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrdersSystem.Domain.Entities;
 using OrdersSystem.Domain.Messages;
+using OrdersSystem.Infra.Repositories;
 using OrdersSystem.Infra.RepositoriesContracts;
-
 
 namespace OrdersSystem.Infra.Consumers;
 
@@ -54,43 +54,63 @@ public class PaymentProcessTopicConsumer : BackgroundService
     {
         stoppingToken.Register(() => _logger.LogInformation("Cancellation requested, stopping the consumer..."));
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                ConsumeResult<Ignore, string> consumeResult = _consumer.Consume(stoppingToken);
-
-                if (consumeResult?.Message?.Value == null)
+                try
                 {
-                    _logger.LogWarning("Received a null or empty message.");
-                    continue;
-                }
+                    ConsumeResult<Ignore, string> consumeResult = _consumer.Consume(stoppingToken);
 
-                _logger.LogInformation($"Received PaymentProcessed event with message: {consumeResult.Message.Value}");
-
-                PaymentProcessedMessage? orderMessage = JsonSerializer.Deserialize<PaymentProcessedMessage>(consumeResult.Message.Value);
-                if (orderMessage != null)
-                {
-                    using (IServiceScope scope = _serviceProvider.CreateScope())
+                    if (consumeResult?.Message?.Value == null)
                     {
-                        var ordersRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>(); // Use interface here
+                        _logger.LogWarning("Received a null or empty message.");
+                        continue;
+                    }
+
+                    _logger.LogInformation($"Received PaymentProcessed event with message: {consumeResult.Message.Value}");
+
+                    PaymentProcessedMessage? orderMessage = JsonSerializer.Deserialize<PaymentProcessedMessage>(consumeResult.Message.Value);
+                    if (orderMessage != null)
+                    {
+                        using IServiceScope scope = _serviceProvider.CreateScope();
+                        IOrderRepository ordersRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
 
                         Order result = await ordersRepository.UpdateOrder(Guid.Parse(orderMessage.OrderId), orderMessage.Status);
 
                         _logger.LogInformation($"Order has been updated. New order with ID {result.Id}, status is: {result.Status}");
                     }
-                }
 
-                _consumer.Commit(consumeResult);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Processing error: {ex.Message}");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    _consumer.Commit(consumeResult);
+                }
+                catch (ConsumeException ex)
+                {
+                    _logger.LogError($"Error occurred: {ex.Error.Reason}");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (KafkaException kEx)
+                {
+                    _logger.LogError($"Kafka error: {kEx.Error.Reason}");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Operation canceled.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Unexpected error: {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
             }
         }
+        finally
+        {
+            _consumer.Close();
+            _logger.LogInformation("Consumer closed gracefully.");
+        }
     }
-
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {

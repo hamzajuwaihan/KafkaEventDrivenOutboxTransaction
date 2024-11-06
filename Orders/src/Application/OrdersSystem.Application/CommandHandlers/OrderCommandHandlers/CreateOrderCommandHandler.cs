@@ -8,7 +8,7 @@ using OrdersSystem.Infra.RepositoriesContracts;
 
 namespace OrdersSystem.Application.CommandHandlers.OrderCommandHandlers;
 
-public class CreateOrderCommandHandler(IOrderRepository orderRepository, KafkaProducer kafkaProducer) : IRequestHandler<CreateOrderCommand, Order>
+public class CreateOrderCommandHandler(IOrderRepository orderRepository) : IRequestHandler<CreateOrderCommand, Order>
 {
     private readonly IOrderRepository _orderRepository = orderRepository;
     public async Task<Order> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -22,10 +22,6 @@ public class CreateOrderCommandHandler(IOrderRepository orderRepository, KafkaPr
         };
 
         Order createdOrder = await _orderRepository.CreateOrder(order);
-
-        string message = JsonSerializer.Serialize(createdOrder);
-
-        await kafkaProducer.ProduceAsync("OrderCreated", message);
 
         return createdOrder;
     }

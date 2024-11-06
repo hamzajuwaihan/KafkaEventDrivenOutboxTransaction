@@ -30,26 +30,30 @@ public class OutboxProcessor : BackgroundService
                 AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 List<OutboxMessage> messages = await context.OutboxMessages
                     .Where(m => !m.IsProcessed)
+                    .OrderBy(m => m.CreatedAt) 
+                    .Take(10)
                     .ToListAsync(stoppingToken);
 
-                foreach (OutboxMessage? message in messages)
+                if (messages.Any())
                 {
+                    using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction = context.Database.BeginTransaction();
                     try
-                    {  
-                        _logger.LogInformation($"Trying to produce the following message topic: {message.Topic}, message: {message.Message}");
-                        await _kafkaProducer.ProduceAsync(message.Topic, message.Message).ConfigureAwait(false);
-                        message.IsProcessed = true;
-                        _logger.LogInformation($"Finished producing the msg with message ID: {message.Id}");
+                    {
+                        foreach (OutboxMessage? message in messages)
+                        {
+                            await _kafkaProducer.ProduceAsync(message.Topic, message.Message);
+                            message.IsProcessed = true;
+                        }
+                        await context.SaveChangesAsync(stoppingToken);
+                        await transaction.CommitAsync(stoppingToken);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error processing message with ID: {MessageId}", message.Id);
+                        await transaction.RollbackAsync(stoppingToken);
+                        _logger.LogError(ex, "Failed to process messages. Transaction rolled back.");
                     }
                 }
-
-                await context.SaveChangesAsync(stoppingToken);
             }
-
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
