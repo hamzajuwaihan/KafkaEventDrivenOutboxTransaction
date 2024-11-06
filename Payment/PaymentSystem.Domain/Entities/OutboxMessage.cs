@@ -11,4 +11,3 @@ public class OutboxMessage
     public OutboxMessage() { }
 
 }
-

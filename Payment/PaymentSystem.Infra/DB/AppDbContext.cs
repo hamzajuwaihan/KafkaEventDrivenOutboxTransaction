@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using PaymentSystem.Domain.Entities;
 namespace PaymentSystem.Infra.DB;
