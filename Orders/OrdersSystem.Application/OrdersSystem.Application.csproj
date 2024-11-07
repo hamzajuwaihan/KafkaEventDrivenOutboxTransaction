@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\OrdersSystem.Domain\OrdersSystem.Domain.csproj" />
-    <ProjectReference Include="..\..\..\OrdersSystem.Infra\OrdersSystem.Infra.csproj" />
+    <ProjectReference Include="..\OrdersSystem.Domain\OrdersSystem.Domain.csproj" />
+    <ProjectReference Include="..\OrdersSystem.Infra\OrdersSystem.Infra.csproj" />
   </ItemGroup>
 
 </Project>

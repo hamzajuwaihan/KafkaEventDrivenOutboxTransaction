@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrdersSystem.Infra.Consumers;
 using OrdersSystem.Infra.DB;
+using OrdersSystem.Infra.Migrations;
 using OrdersSystem.Infra.Processors;
 using OrdersSystem.Infra.Producers;
 using OrdersSystem.Infra.Repositories;
@@ -15,6 +16,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+
         ConsumerConfig consumerConfig = new ConsumerConfig
         {
             BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
@@ -40,6 +42,9 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+            
+        services.AddHostedService<MigrationService<AppDbContext>>();
+
 
         services.AddHostedService<PaymentProcessTopicConsumer>();
 

@@ -16,9 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OrdersSystem.Domain\OrdersSystem.Domain.csproj" />
     <ProjectReference Include="..\OrdersSystem.Infra\OrdersSystem.Infra.csproj" />
-    <ProjectReference Include="..\src\Presentation\OrdersSystem.Presentation.Api\OrdersSystem.Presentation.Api.csproj" />
+    <ProjectReference Include="..\OrdersSystem.Application\OrdersSystem.Application.csproj" />
+    <ProjectReference Include="..\OrdersSystem.Presentation.Api\OrdersSystem.Presentation.Api.csproj" />
   </ItemGroup>
 
 </Project>

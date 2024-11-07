@@ -6,6 +6,7 @@ using OrdersSystem.Presentation.Api.Routes;
 using OrdersSystem.Application;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://*:80");
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -27,11 +28,10 @@ WebApplication app = builder.Build();
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 
 
 app.MapOrderEndpoint();

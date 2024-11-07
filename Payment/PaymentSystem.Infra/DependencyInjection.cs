@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PaymentSystem.Infra.Consumers;
 using PaymentSystem.Infra.DB;
+using PaymentSystem.Infra.Migrations;
 using PaymentSystem.Infra.Processors;
 using PaymentSystem.Infra.Producers;
 using PaymentSystem.Infra.Repositories;
@@ -37,6 +38,8 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddHostedService<MigrationService<AppDbContext>>();
         services.AddHostedService<OrderCreatedConsumer>();
         services.AddHostedService<OutboxProcessor>();
 
