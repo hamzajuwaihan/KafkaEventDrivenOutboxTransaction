@@ -15,8 +15,8 @@ public class MigrationService<TContext> : IHostedService where TContext : DbCont
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        TContext dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
         await dbContext.Database.MigrateAsync(cancellationToken);
     }
 
